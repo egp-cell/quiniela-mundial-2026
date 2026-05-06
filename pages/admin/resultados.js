@@ -41,7 +41,34 @@ export default function AdminResultados() {
   }
 
   useEffect(() => { cargar(); }, []);
+async function borrarResultado(partidoId) {
+    if (!confirm('¿Borrar el resultado de este partido?\n\nEsto eliminará los puntos calculados de TODAS las quinielas para este partido y recalculará el ranking.')) return;
 
+    setGuardando({ ...guardando, [partidoId]: true });
+
+    try {
+      const res = await fetch('/api/borrar-resultado', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partidoId })
+      });
+      const d = await res.json();
+
+      if (d.exito) {
+        alert(`✓ Resultado borrado. Puntos recalculados.`);
+        const nuevos = { ...resultados };
+        delete nuevos[partidoId];
+        setResultados(nuevos);
+        cargar();
+      } else {
+        alert('Error: ' + d.error);
+      }
+    } catch (e) {
+      alert('Error de conexion');
+    }
+
+    setGuardando({ ...guardando, [partidoId]: false });
+  }
   async function capturar(partidoId) {
     const r = resultados[partidoId];
     if (!r || r.gl === '' || r.gv === '' || r.gl === undefined || r.gv === undefined) {
@@ -169,18 +196,34 @@ export default function AdminResultados() {
                     <span style={{ fontWeight: 600, fontSize: 14 }}>{p.visitante || 'Por definir'}</span>
                   </div>
 
-                  <button
-                    onClick={() => capturar(p.id)}
-                    disabled={guardando[p.id]}
-                    style={{
-                      padding: '10px 16px',
-                      background: finalizado ? '#EF9F27' : '#1D9E75',
-                      color: 'white', border: 'none', borderRadius: 8,
-                      cursor: 'pointer', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap'
-                    }}
-                  >
-                    {guardando[p.id] ? '...' : (finalizado ? 'Recalcular' : 'Guardar')}
-                  </button>
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <button
+                      onClick={() => capturar(p.id)}
+                      disabled={guardando[p.id]}
+                      style={{
+                        padding: '8px 14px',
+                        background: finalizado ? '#EF9F27' : '#1D9E75',
+                        color: 'white', border: 'none', borderRadius: 8,
+                        cursor: 'pointer', fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {guardando[p.id] ? '...' : (finalizado ? '✓ Recalcular' : 'Guardar')}
+                    </button>
+                    {finalizado && (
+                      <button
+                        onClick={() => borrarResultado(p.id)}
+                        disabled={guardando[p.id]}
+                        style={{
+                          padding: '8px 14px',
+                          background: '#FFE5E5',
+                          color: '#C62828', border: '1px solid #FFCDD2', borderRadius: 8,
+                          cursor: 'pointer', fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap'
+                        }}
+                      >
+                        🗑️ Borrar
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );
