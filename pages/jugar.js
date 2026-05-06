@@ -61,7 +61,8 @@ export default function Jugar() {
               <div style={{ fontSize: 12, opacity: 0.7, letterSpacing: 1 }}>HOLA</div>
               <h1 style={{ fontSize: 22, fontWeight: 800 }}>{logueado.nombre} 👋</h1>
             </div>
-            <button onClick={logout} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Salir</button>
+           <a href="/tabla" style={{ padding: '8px 16px', background: '#FAC775', color: '#412402', borderRadius: 8, textDecoration: 'none', fontWeight: 700, fontSize: 13, marginRight: 8 }}>🏆 Tabla</a> 
+           <button onClick={logout} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Salir</button>
           </div>
         </header>
 
