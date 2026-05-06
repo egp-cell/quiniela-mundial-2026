@@ -22,10 +22,11 @@ export default function Home() {
   const [form, setForm] = useState({ nombre: '', email: '', telefono: '' });
   const [enviando, setEnviando] = useState(false);
   const [exito, setExito] = useState(null);
+  const [reglamento, setReglamento] = useState(false);
   const [countdown, setCountdown] = useState({ d: 0, h: 0, m: 0, s: 0 });
 
   useEffect(() => {
-    fetch('/api/stats').then(r => r.json()).then(setStats);
+    fetch('/api/stats').then(r => r.json()).then(setStats).catch(() => {});
     const t = setInterval(() => {
       const inicio = new Date('2026-06-11T13:00:00-06:00').getTime();
       const ahora = new Date().getTime();
@@ -53,7 +54,14 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, cantidad })
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); }
+      catch (e) {
+        alert('Error del servidor. Verifica configuracion en Vercel.');
+        setEnviando(false);
+        return;
+      }
       if (data.exito) {
         setExito(data);
         setForm({ nombre: '', email: '', telefono: '' });
@@ -70,9 +78,9 @@ export default function Home() {
   return (
     <div style={{ fontFamily: 'Inter, system-ui, sans-serif', background: '#F8F9FB', minHeight: '100vh' }}>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
 
       <div style={{ background: '#021A33', color: 'white', padding: '12px', display: 'flex', justifyContent: 'center', gap: 10, position: 'sticky', top: 0, zIndex: 50 }}>
+        <button onClick={() => setReglamento(true)} style={{ padding: '8px 18px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>📖 Reglamento</button>
         <a href="#registro" style={{ padding: '8px 18px', background: '#FAC775', color: '#412402', borderRadius: 8, textDecoration: 'none', fontWeight: 700, fontSize: 13 }}>Inscribirme ahora</a>
       </div>
 
@@ -139,14 +147,17 @@ export default function Home() {
           <div style={{ fontSize: 64, fontWeight: 900, color: '#FAC775' }}>${bolsa.toLocaleString()}</div>
         </div>
         <div style={{ maxWidth: 900, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
-          {[['🥇', 'PRIMER LUGAR', 0.56, '#FAC775'], ['🥈', 'SEGUNDO LUGAR', 0.23, '#E0E0E0'], ['🥉', 'TERCER LUGAR', 0.14, '#CD9C5C']].map(([ic, t, p, c], i) => (
+          {[['🥇', 'PRIMER LUGAR', 0.56, 56, '#FAC775'], ['🥈', 'SEGUNDO LUGAR', 0.23, 23, '#E0E0E0'], ['🥉', 'TERCER LUGAR', 0.14, 14, '#CD9C5C']].map(([ic, t, p, pct, c], i) => (
             <div key={i} style={{ borderRadius: 20, padding: 28, textAlign: 'center', background: 'rgba(255,255,255,0.05)' }}>
               <div style={{ fontSize: 40 }}>{ic}</div>
               <div style={{ fontSize: 11, letterSpacing: 2, opacity: 0.8 }}>{t}</div>
               <div style={{ fontSize: 32, fontWeight: 800, color: c }}>${Math.round(bolsa * p).toLocaleString()}</div>
-              <div style={{ fontSize: 12, opacity: 0.7 }}>{p * 100}% de la bolsa</div>
+              <div style={{ fontSize: 12, opacity: 0.7 }}>{pct}% de la bolsa</div>
             </div>
           ))}
+        </div>
+        <div style={{ maxWidth: 900, margin: '24px auto 0', textAlign: 'center', fontSize: 13, opacity: 0.7 }}>
+          Comision del organizador: 7% de la bolsa
         </div>
       </section>
 
@@ -185,6 +196,53 @@ export default function Home() {
             <p style={{ color: '#666', marginBottom: 24 }}>Ahora paga en MoneyPool. Cuando se confirme tu pago recibiras tu usuario y password por email.</p>
             <a href={exito.linkMoneyPool} target="_blank" rel="noreferrer" style={{ display: 'block', padding: 16, background: 'linear-gradient(135deg, #042C53, #0C447C)', color: 'white', borderRadius: 12, textDecoration: 'none', fontWeight: 700, marginBottom: 12 }}>Pagar ${exito.monto.toLocaleString()} en MoneyPool</a>
             <button onClick={() => setExito(null)} style={{ padding: '10px 20px', background: '#F0F2F5', color: '#666', border: 'none', borderRadius: 10, cursor: 'pointer' }}>Cerrar</button>
+          </div>
+        </div>
+      )}
+
+      {reglamento && (
+        <div onClick={() => setReglamento(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 24, maxWidth: 600, width: '100%', padding: 40, maxHeight: '90vh', overflowY: 'auto' }}>
+            <h2 style={{ fontSize: 26, fontWeight: 800, color: '#042C53', marginBottom: 8 }}>📖 Reglamento</h2>
+            <p style={{ color: '#666', marginBottom: 24 }}>Quiniela Mundial 2026</p>
+
+            <h3 style={{ color: '#042C53', fontSize: 18, fontWeight: 800, marginTop: 20, marginBottom: 10 }}>💰 Inscripcion</h3>
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              <li style={{ padding: '8px 12px', background: '#F8F9FB', borderLeft: '3px solid #042C53', borderRadius: 4, marginBottom: 6, fontSize: 14 }}><b>Costo:</b> $3,000 MXN por quiniela</li>
+              <li style={{ padding: '8px 12px', background: '#F8F9FB', borderLeft: '3px solid #042C53', borderRadius: 4, marginBottom: 6, fontSize: 14 }}><b>Quinielas por persona:</b> ilimitadas</li>
+              <li style={{ padding: '8px 12px', background: '#F8F9FB', borderLeft: '3px solid #042C53', borderRadius: 4, marginBottom: 6, fontSize: 14 }}><b>Pago:</b> MoneyPool</li>
+              <li style={{ padding: '8px 12px', background: '#F8F9FB', borderLeft: '3px solid #042C53', borderRadius: 4, marginBottom: 6, fontSize: 14 }}><b>Cierre:</b> 10 de junio 2026</li>
+            </ul>
+
+            <h3 style={{ color: '#042C53', fontSize: 18, fontWeight: 800, marginTop: 20, marginBottom: 10 }}>🎯 Puntuacion</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+              <div style={{ padding: 14, background: '#FAEEDA', borderRadius: 10, textAlign: 'center' }}>
+                <div style={{ fontSize: 26, fontWeight: 800, color: '#854F0B' }}>3 pts</div>
+                <div style={{ fontSize: 11, color: '#633806', textTransform: 'uppercase', fontWeight: 600 }}>Acertar ganador / empate</div>
+              </div>
+              <div style={{ padding: 14, background: '#FAEEDA', borderRadius: 10, textAlign: 'center' }}>
+                <div style={{ fontSize: 26, fontWeight: 800, color: '#854F0B' }}>5 pts</div>
+                <div style={{ fontSize: 11, color: '#633806', textTransform: 'uppercase', fontWeight: 600 }}>Marcador exacto</div>
+              </div>
+            </div>
+            <p style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>Solo cuenta el resultado al min 90.</p>
+
+            <h3 style={{ color: '#042C53', fontSize: 18, fontWeight: 800, marginTop: 20, marginBottom: 10 }}>🏆 Premios</h3>
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              <li style={{ padding: '8px 12px', background: '#F8F9FB', borderLeft: '3px solid #042C53', borderRadius: 4, marginBottom: 6, fontSize: 14 }}><b>1er lugar:</b> 56% de la bolsa</li>
+              <li style={{ padding: '8px 12px', background: '#F8F9FB', borderLeft: '3px solid #042C53', borderRadius: 4, marginBottom: 6, fontSize: 14 }}><b>2do lugar:</b> 23% de la bolsa</li>
+              <li style={{ padding: '8px 12px', background: '#F8F9FB', borderLeft: '3px solid #042C53', borderRadius: 4, marginBottom: 6, fontSize: 14 }}><b>3er lugar:</b> 14% de la bolsa</li>
+              <li style={{ padding: '8px 12px', background: '#F8F9FB', borderLeft: '3px solid #042C53', borderRadius: 4, marginBottom: 6, fontSize: 14 }}><b>Comision organizador:</b> 7%</li>
+            </ul>
+
+            <h3 style={{ color: '#042C53', fontSize: 18, fontWeight: 800, marginTop: 20, marginBottom: 10 }}>⚖️ Empates</h3>
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              <li style={{ padding: '8px 12px', background: '#F8F9FB', borderLeft: '3px solid #042C53', borderRadius: 4, marginBottom: 6, fontSize: 14 }}>1. Mas marcadores exactos</li>
+              <li style={{ padding: '8px 12px', background: '#F8F9FB', borderLeft: '3px solid #042C53', borderRadius: 4, marginBottom: 6, fontSize: 14 }}>2. Mas aciertos en eliminatorias</li>
+              <li style={{ padding: '8px 12px', background: '#F8F9FB', borderLeft: '3px solid #042C53', borderRadius: 4, marginBottom: 6, fontSize: 14 }}>3. Reparto en partes iguales</li>
+            </ul>
+
+            <button onClick={() => setReglamento(false)} style={{ marginTop: 24, width: '100%', padding: 14, background: '#042C53', color: 'white', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer' }}>Cerrar</button>
           </div>
         </div>
       )}
