@@ -1,117 +1,349 @@
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 
-export default function TablaLideres() {
-  const [ranking, setRanking] = useState([]);
+const BANDERAS = {
+  'México': 'mx', 'Sudáfrica': 'za', 'Corea del Sur': 'kr', 'Chequia': 'cz',
+  'Canada': 'ca', 'Bosnia': 'ba', 'Catar': 'qa', 'Suiza': 'ch',
+  'Brasil': 'br', 'Marruecos': 'ma', 'Haití': 'ht', 'Escocia': 'gb-sct',
+  'Estados Unidos': 'us', 'Paraguay': 'py', 'Australia': 'au', 'Turquía': 'tr',
+  'Alemania': 'de', 'Curazao': 'cw', 'Costa de Marfil': 'ci', 'Ecuador': 'ec',
+  'Países Bajos': 'nl', 'Japón': 'jp', 'Suecia': 'se', 'Túnez': 'tn',
+  'Bélgica': 'be', 'Irán': 'ir', 'Egipto': 'eg', 'Nueva Zelanda': 'nz',
+  'España': 'es', 'Uruguay': 'uy', 'Arabia Saudita': 'sa', 'Cabo Verde': 'cv',
+  'Francia': 'fr', 'Senegal': 'sn', 'Noruega': 'no', 'Irak': 'iq',
+  'Argentina': 'ar', 'Austria': 'at', 'Argelia': 'dz', 'Jordania': 'jo',
+  'Portugal': 'pt', 'Colombia': 'co', 'Uzbekistán': 'uz', 'RD Congo': 'cd',
+  'Inglaterra': 'gb-eng', 'Croacia': 'hr', 'Ghana': 'gh', 'Panamá': 'pa'
+};
+
+export default function PronosticosQuiniela() {
+  const router = useRouter();
+  const { id } = router.query;
+
+  const [data, setData] = useState(null);
   const [cargando, setCargando] = useState(true);
-  const [busqueda, setBusqueda] = useState('');
+  const [diaActivo, setDiaActivo] = useState(null);
+  const [guardando, setGuardando] = useState({});
+  const [pronosticos, setPronosticos] = useState({});
+  const [logueado, setLogueado] = useState(null);
 
-  async function cargar() {
+  useEffect(() => {
+    const sesion = sessionStorage.getItem('quiniela_sesion');
+    if (!sesion) {
+      router.push('/jugar');
+      return;
+    }
+    setLogueado(JSON.parse(sesion));
+  }, []);
+
+  useEffect(() => {
+    if (!id || !logueado) return;
+    cargarDatos();
+  }, [id, logueado]);
+
+  async function cargarDatos() {
     try {
-      const r = await fetch('/api/tabla');
+      const r = await fetch(`/api/partidos?quinielaId=${id}`);
       const d = await r.json();
-      if (d.exito) setRanking(d.ranking);
-    } catch (e) { console.error(e); }
+      if (d.exito) {
+        // Verificar que esta quiniela sea del usuario logueado
+        if (d.quiniela && d.quiniela.usuario_id !== logueado.id) {
+          alert('Esta quiniela no es tuya');
+          router.push('/jugar');
+          return;
+        }
+        setData(d);
+        setPronosticos(d.pronosticos);
+
+        // Set primer día con partidos como activo
+        const dias = agruparPorDia(d.partidos);
+        const primerDia = Object.keys(dias)[0];
+        if (primerDia) setDiaActivo(primerDia);
+      }
+    } catch (e) {
+      console.error(e);
+    }
     setCargando(false);
   }
 
-  useEffect(() => {
-    cargar();
-    const interval = setInterval(cargar, 30000); // refresca cada 30s
-    return () => clearInterval(interval);
-  }, []);
+  function agruparPorDia(partidos) {
+    const grupos = {};
+    partidos.forEach(p => {
+      let claveDia;
+      if (!p.fecha_hora) {
+        claveDia = 'zzz_Por definir'; // prefijo para que quede al final
+      } else {
+        const fecha = new Date(p.fecha_hora);
+        // Usar hora local de México para agrupar
+        const offset = -6 * 60; // CDMX UTC-6 en minutos
+        const fechaMx = new Date(fecha.getTime() + offset * 60 * 1000);
+        claveDia = fechaMx.toISOString().split('T')[0];
+      }
+      if (!grupos[claveDia]) grupos[claveDia] = [];
+      grupos[claveDia].push(p);
+    });
 
-  const filtrado = ranking.filter(q =>
-    q.nombreQuiniela.toLowerCase().includes(busqueda.toLowerCase()) ||
-    q.nombreUsuario.toLowerCase().includes(busqueda.toLowerCase())
-  );
+    // Ordenar partidos dentro de cada día por hora ascendente
+    Object.keys(grupos).forEach(dia => {
+      grupos[dia].sort((a, b) => {
+        if (!a.fecha_hora) return 1;
+        if (!b.fecha_hora) return -1;
+        return new Date(a.fecha_hora).getTime() - new Date(b.fecha_hora).getTime();
+      });
+    });
 
-  function colorPosicion(pos) {
-    if (pos === 1) return { bg: 'linear-gradient(135deg, #FFD700, #FFA500)', text: 'white', emoji: '🥇' };
-    if (pos === 2) return { bg: 'linear-gradient(135deg, #C0C0C0, #A8A8A8)', text: 'white', emoji: '🥈' };
-    if (pos === 3) return { bg: 'linear-gradient(135deg, #CD7F32, #A0522D)', text: 'white', emoji: '🥉' };
-    return { bg: '#F0F2F5', text: '#666', emoji: '' };
+    // Re-ordenar las claves: días con fecha primero, "Por definir" al final
+    const ordenado = {};
+    const claves = Object.keys(grupos).sort();
+    claves.forEach(k => {
+      const claveLimpia = k.replace('zzz_', '');
+      ordenado[claveLimpia] = grupos[k];
+    });
+
+    return ordenado;
   }
+
+  function formatearDia(claveDia) {
+    if (claveDia === 'Por definir') return 'Por definir';
+    const fecha = new Date(claveDia + 'T12:00:00');
+    const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    return `${dias[fecha.getDay()]} ${fecha.getDate()} ${meses[fecha.getMonth()]}`;
+  }
+
+  function formatearHora(fechaHora) {
+    if (!fechaHora) return '';
+    const f = new Date(fechaHora);
+    return f.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+  }
+
+  function partidoEmpezado(fechaHora) {
+    if (!fechaHora) return false;
+    return new Date() >= new Date(fechaHora);
+  }
+
+  async function guardarPronostico(partidoId, golesLocal, golesVisitante) {
+    const key = `${partidoId}`;
+    setGuardando({ ...guardando, [key]: 'guardando' });
+
+    try {
+      const r = await fetch('/api/pronosticar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quinielaId: parseInt(id),
+          partidoId,
+          golesLocal,
+          golesVisitante
+        })
+      });
+      const d = await r.json();
+
+      if (d.exito) {
+        setGuardando({ ...guardando, [key]: 'guardado' });
+        setTimeout(() => {
+          setGuardando(prev => {
+            const nuevo = { ...prev };
+            delete nuevo[key];
+            return nuevo;
+          });
+        }, 1500);
+      } else {
+        setGuardando({ ...guardando, [key]: 'error' });
+        alert('Error: ' + d.error);
+      }
+    } catch (e) {
+      setGuardando({ ...guardando, [key]: 'error' });
+    }
+  }
+
+  function cambiarPronostico(partidoId, lado, valor) {
+    const actual = pronosticos[partidoId] || {};
+    const nuevo = { ...actual };
+    if (lado === 'local') nuevo.goles_local = valor;
+    else nuevo.goles_visitante = valor;
+
+    setPronosticos({ ...pronosticos, [partidoId]: nuevo });
+
+    // Solo guardar si ambos campos tienen valor
+    if (nuevo.goles_local !== undefined && nuevo.goles_local !== '' && nuevo.goles_visitante !== undefined && nuevo.goles_visitante !== '') {
+      // Debounce: esperar 800ms después del último cambio
+      clearTimeout(window[`debounce_${partidoId}`]);
+      window[`debounce_${partidoId}`] = setTimeout(() => {
+        guardarPronostico(partidoId, nuevo.goles_local, nuevo.goles_visitante);
+      }, 800);
+    }
+  }
+
+  function logout() {
+    sessionStorage.removeItem('quiniela_sesion');
+    router.push('/jugar');
+  }
+
+  if (cargando || !data) {
+    return (
+      <div style={{ fontFamily: 'Inter, system-ui, sans-serif', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        Cargando...
+      </div>
+    );
+  }
+
+  const dias = agruparPorDia(data.partidos);
+  const clavesDias = Object.keys(dias);
+  const partidosDelDia = diaActivo ? dias[diaActivo] || [] : [];
+  const totalPronosticados = Object.keys(pronosticos).filter(k => pronosticos[k] && pronosticos[k].goles_local !== undefined).length;
 
   return (
     <div style={{ fontFamily: 'Inter, system-ui, sans-serif', background: '#F8F9FB', minHeight: '100vh' }}>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-      <header style={{ background: 'linear-gradient(135deg, #042C53, #0C447C)', color: 'white', padding: '24px 30px' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <a href="/jugar" style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, textDecoration: 'none' }}>← Volver a mis quinielas</a>
-            <button onClick={cargar} style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>🔄 Actualizar</button>
+      <header style={{ background: 'linear-gradient(135deg, #042C53, #0C447C)', color: 'white', padding: '20px 30px', position: 'sticky', top: 0, zIndex: 100 }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <a href="/jugar" style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, textDecoration: 'none' }}>← Mis quinielas</a>
+             <a href="/tabla" style={{ padding: '10px 20px', background: '#FAC775', color: '#412402', borderRadius: 10, textDecoration: 'none', fontWeight: 800, fontSize: 14, boxShadow: '0 3px 10px rgba(250,199,117,0.4)' }}>🏆 Ver Tabla</a>
+            </div>
+            <h1 style={{ fontSize: 22, fontWeight: 800, marginTop: 4 }}>{data.quiniela?.nombre || 'Quiniela'}</h1>
+            <div style={{ fontSize: 13, opacity: 0.8, marginTop: 2 }}>
+              {totalPronosticados} de {data.partidos.length} partidos pronosticados
+            </div>
           </div>
-          <h1 style={{ fontSize: 28, fontWeight: 900, margin: 0 }}>🏆 Tabla de Líderes</h1>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', margin: '4px 0 0 0' }}>
-            {ranking.length} quinielas activas · Actualización automática cada 30s
-          </p>
+          <button onClick={logout} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Salir</button>
         </div>
       </header>
 
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: 24 }}>
-
-        {/* Buscador */}
-        <input
-          type="text"
-          placeholder="🔍 Buscar por nombre de quiniela o jugador..."
-          value={busqueda}
-          onChange={e => setBusqueda(e.target.value)}
-          style={{ width: '100%', padding: 14, border: '1px solid #E0E0E0', borderRadius: 12, fontSize: 14, marginBottom: 20, boxSizing: 'border-box' }}
-        />
-
-        {/* Leyenda */}
-        <div style={{ background: 'white', padding: 16, borderRadius: 12, marginBottom: 16, border: '1px solid #E0E0E0' }}>
-          <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>Sistema de puntos</div>
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 13, color: '#444' }}>
-            <span>🎯 <b>5 pts</b> marcador exacto</span>
-            <span>✓ <b>3 pts</b> ganador o empate acertado</span>
-          </div>
+      {/* Tabs de días */}
+      <div style={{ background: 'white', borderBottom: '1px solid #E0E0E0', overflowX: 'auto', position: 'sticky', top: 90, zIndex: 50 }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', gap: 4, padding: '12px 16px' }}>
+          {clavesDias.map(clave => {
+            const partidosDia = dias[clave];
+            const pronosticadosDia = partidosDia.filter(p => pronosticos[p.id] && pronosticos[p.id].goles_local !== undefined).length;
+            const completo = pronosticadosDia === partidosDia.length;
+            return (
+              <button
+                key={clave}
+                onClick={() => setDiaActivo(clave)}
+                style={{
+                  padding: '10px 16px',
+                  background: diaActivo === clave ? '#042C53' : '#F0F2F5',
+                  color: diaActivo === clave ? 'white' : '#666',
+                  border: 'none',
+                  borderRadius: 10,
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: 13,
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                {formatearDia(clave)}
+                <span style={{
+                  fontSize: 11,
+                  padding: '2px 6px',
+                  background: completo ? '#1D9E75' : (diaActivo === clave ? 'rgba(255,255,255,0.2)' : '#E0E0E0'),
+                  color: completo ? 'white' : (diaActivo === clave ? 'white' : '#888'),
+                  borderRadius: 6
+                }}>
+                  {pronosticadosDia}/{partidosDia.length}
+                </span>
+              </button>
+            );
+          })}
         </div>
+      </div>
 
-        {cargando ? (
-          <div style={{ textAlign: 'center', padding: 60, color: '#888' }}>Cargando ranking...</div>
-        ) : filtrado.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 60, color: '#888', background: 'white', borderRadius: 14 }}>
-            {busqueda ? 'Sin resultados para tu búsqueda' : 'Aún no hay quinielas activas'}
-          </div>
+      <div style={{ maxWidth: 800, margin: '0 auto', padding: '30px 20px' }}>
+        {partidosDelDia.length === 0 ? (
+          <div style={{ textAlign: 'center', color: '#888', padding: 40 }}>No hay partidos en este día</div>
         ) : (
-          <div style={{ background: 'white', borderRadius: 14, overflow: 'hidden', border: '1px solid #E0E0E0' }}>
-            {/* Header tabla */}
-            <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr 80px 70px 70px', padding: '12px 16px', background: '#F8F9FB', fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', borderBottom: '1px solid #E0E0E0' }}>
-              <div style={{ textAlign: 'center' }}>Pos</div>
-              <div>Quiniela</div>
-              <div style={{ textAlign: 'center' }}>Pts</div>
-              <div style={{ textAlign: 'center' }}>🎯 5pts</div>
-              <div style={{ textAlign: 'center' }}>✓ 3pts</div>
-            </div>
+          partidosDelDia.map(p => {
+            const empezado = partidoEmpezado(p.fecha_hora);
+            const pron = pronosticos[p.id] || {};
+            const estadoGuardado = guardando[p.id];
 
-            {/* Filas */}
-            {filtrado.map(q => {
-              const colores = colorPosicion(q.posicion);
-              return (
-                <div key={q.id} style={{ display: 'grid', gridTemplateColumns: '60px 1fr 80px 70px 70px', padding: '14px 16px', borderBottom: '1px solid #F0F2F5', alignItems: 'center' }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: '50%', background: colores.bg, color: colores.text, fontWeight: 800, fontSize: 13 }}>
-                      {colores.emoji || `#${q.posicion}`}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 700, color: '#042C53', fontSize: 14 }}>{q.nombreQuiniela}</div>
-                    <div style={{ fontSize: 12, color: '#888' }}>{q.nombreUsuario}</div>
-                  </div>
-                  <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 900, color: '#042C53' }}>{q.puntos}</div>
-                  <div style={{ textAlign: 'center', fontSize: 14, color: '#1D9E75', fontWeight: 700 }}>{q.exactos}</div>
-                  <div style={{ textAlign: 'center', fontSize: 14, color: '#666', fontWeight: 600 }}>{q.aciertos}</div>
+            return (
+              <div key={p.id} style={{
+                background: 'white',
+                borderRadius: 14,
+                padding: 20,
+                marginBottom: 12,
+                border: '1px solid #E0E0E0',
+                opacity: empezado ? 0.6 : 1
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14, fontSize: 12, color: '#888' }}>
+                  <span>{p.fase}{p.grupo ? ` · Grupo ${p.grupo}` : ''}</span>
+                  <span>{formatearHora(p.fecha_hora)}{empezado ? ' · 🔒 Bloqueado' : ''}</span>
                 </div>
-              );
-            })}
-          </div>
-        )}
 
-        <div style={{ textAlign: 'center', marginTop: 30, fontSize: 12, color: '#888' }}>
-          🏆 Quiniela Mundial FIFA 2026
-        </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, alignItems: 'center' }}>
+                  {/* Local */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-end' }}>
+                    <span style={{ fontWeight: 600, textAlign: 'right', fontSize: 14 }}>{p.local}</span>
+                    {BANDERAS[p.local] && <img src={`https://flagcdn.com/w80/${BANDERAS[p.local]}.png`} style={{ width: 32, height: 22, borderRadius: 3, flexShrink: 0 }} />}
+                  </div>
+
+                  {/* Inputs */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input
+                      type="number"
+                      min="0"
+                      max="20"
+                      disabled={empezado}
+                      value={pron.goles_local !== undefined ? pron.goles_local : ''}
+                      onChange={e => cambiarPronostico(p.id, 'local', e.target.value)}
+                      style={{
+                        width: 50,
+                        height: 50,
+                        textAlign: 'center',
+                        fontSize: 22,
+                        fontWeight: 800,
+                        border: '2px solid ' + (estadoGuardado === 'guardado' ? '#1D9E75' : estadoGuardado === 'error' ? '#E04444' : '#E0E0E0'),
+                        borderRadius: 10,
+                        background: empezado ? '#F0F2F5' : 'white'
+                      }}
+                    />
+                    <span style={{ fontSize: 16, fontWeight: 700, color: '#888' }}>-</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="20"
+                      disabled={empezado}
+                      value={pron.goles_visitante !== undefined ? pron.goles_visitante : ''}
+                      onChange={e => cambiarPronostico(p.id, 'visitante', e.target.value)}
+                      style={{
+                        width: 50,
+                        height: 50,
+                        textAlign: 'center',
+                        fontSize: 22,
+                        fontWeight: 800,
+                        border: '2px solid ' + (estadoGuardado === 'guardado' ? '#1D9E75' : estadoGuardado === 'error' ? '#E04444' : '#E0E0E0'),
+                        borderRadius: 10,
+                        background: empezado ? '#F0F2F5' : 'white'
+                      }}
+                    />
+                  </div>
+
+                  {/* Visitante */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {BANDERAS[p.visitante] && <img src={`https://flagcdn.com/w80/${BANDERAS[p.visitante]}.png`} style={{ width: 32, height: 22, borderRadius: 3, flexShrink: 0 }} />}
+                    <span style={{ fontWeight: 600, fontSize: 14 }}>{p.visitante}</span>
+                  </div>
+                </div>
+
+                {estadoGuardado && (
+                  <div style={{ textAlign: 'center', marginTop: 10, fontSize: 11, fontWeight: 600, color: estadoGuardado === 'guardado' ? '#1D9E75' : estadoGuardado === 'error' ? '#E04444' : '#888' }}>
+                    {estadoGuardado === 'guardando' && '💾 Guardando...'}
+                    {estadoGuardado === 'guardado' && '✓ Guardado'}
+                    {estadoGuardado === 'error' && '✕ Error'}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );
