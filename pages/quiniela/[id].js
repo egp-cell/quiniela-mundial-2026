@@ -71,15 +71,36 @@ export default function PronosticosQuiniela() {
     partidos.forEach(p => {
       let claveDia;
       if (!p.fecha_hora) {
-        claveDia = 'Por definir';
+        claveDia = 'zzz_Por definir'; // prefijo para que quede al final
       } else {
         const fecha = new Date(p.fecha_hora);
-        claveDia = fecha.toISOString().split('T')[0]; // YYYY-MM-DD
+        // Usar hora local de Mexico para agrupar
+        const offset = -6 * 60; // CDMX UTC-6 en minutos
+        const fechaMx = new Date(fecha.getTime() + offset * 60 * 1000);
+        claveDia = fechaMx.toISOString().split('T')[0];
       }
       if (!grupos[claveDia]) grupos[claveDia] = [];
       grupos[claveDia].push(p);
     });
-    return grupos;
+
+    // Ordenar partidos dentro de cada dia por hora ascendente
+    Object.keys(grupos).forEach(dia => {
+      grupos[dia].sort((a, b) => {
+        if (!a.fecha_hora) return 1;
+        if (!b.fecha_hora) return -1;
+        return new Date(a.fecha_hora).getTime() - new Date(b.fecha_hora).getTime();
+      });
+    });
+
+    // Re-ordenar las claves: dias con fecha primero, "Por definir" al final
+    const ordenado = {};
+    const claves = Object.keys(grupos).sort();
+    claves.forEach(k => {
+      const claveLimpia = k.replace('zzz_', '');
+      ordenado[claveLimpia] = grupos[k];
+    });
+
+    return ordenado;
   }
 
   function formatearDia(claveDia) {
