@@ -86,19 +86,13 @@ export default function Jugar() {
                       <div style={{ fontSize: 24, fontWeight: 800, color: '#BA7517' }}>{q.posicion ? `#${q.posicion}` : '—'}</div>
                     </div>
                   </div>
-                  <button style={{ width: '100%', marginTop: 18, padding: 12, background: '#FAC775', color: '#412402', border: 'none', borderRadius: 10, fontWeight: 700, cursor: 'pointer' }}>
+                 <a href={`/quiniela/${q.id}`} style={{ display: 'block', width: '100%', marginTop: 18, padding: 12, background: '#FAC775', color: '#412402', border: 'none', borderRadius: 10, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none', boxSizing: 'border-box' }}>
                     Pronosticar partidos →
-                  </button>
+                  </a>
                 </div>
               ))}
             </div>
           )}
-
-          <div style={{ marginTop: 30, padding: 20, background: '#FFF8E7', borderRadius: 12, border: '1px solid #FAE3A0' }}>
-            <div style={{ fontSize: 14, color: '#854F0B' }}>
-              <b>📅 Proximamente:</b> El sistema para pronosticar los 104 partidos estara disponible antes del 11 de junio. Por ahora puedes ver tus quinielas y verificar que tu cuenta este activa.
-            </div>
-          </div>
         </div>
       </div>
     );
