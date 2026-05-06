@@ -7,7 +7,7 @@ export default function Jugar() {
   const [cargando, setCargando] = useState(false);
   const [logueado, setLogueado] = useState(null);
 
-  // Auto-login si ya hay sesion guardada
+  // Auto-login si ya hay sesión guardada
   useEffect(() => {
     const sesion = sessionStorage.getItem('quiniela_sesion');
     if (sesion) {
@@ -37,7 +37,7 @@ export default function Jugar() {
         setError(data.error);
       }
     } catch (err) {
-      setError('Error de conexion');
+      setError('Error de conexión');
     }
     setCargando(false);
   }
@@ -83,7 +83,7 @@ export default function Jugar() {
                       <div style={{ fontSize: 24, fontWeight: 800, color: '#1D9E75' }}>{q.puntos || 0}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 11, color: '#888' }}>POSICION</div>
+                      <div style={{ fontSize: 11, color: '#888' }}>POSICIÓN</div>
                       <div style={{ fontSize: 24, fontWeight: 800, color: '#BA7517' }}>{q.posicion ? `#${q.posicion}` : '—'}</div>
                     </div>
                   </div>
@@ -147,8 +147,8 @@ export default function Jugar() {
         </form>
 
         <div style={{ textAlign: 'center', marginTop: 24, paddingTop: 24, borderTop: '1px solid #F0F2F5' }}>
-          <p style={{ fontSize: 13, color: '#666' }}>¿Aun no te inscribes?</p>
-          <a href="/" style={{ fontSize: 14, color: '#042C53', fontWeight: 700, textDecoration: 'none' }}>Ir a inscripcion →</a>
+          <p style={{ fontSize: 13, color: '#666' }}>¿Aún no te inscribes?</p>
+          <a href="/" style={{ fontSize: 14, color: '#042C53', fontWeight: 700, textDecoration: 'none' }}>Ir a inscripción →</a>
         </div>
       </div>
     </div>
