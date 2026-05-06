@@ -1,0 +1,326 @@
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+
+const BANDERAS = {
+  'Mexico': 'mx', 'Sudafrica': 'za', 'Corea del Sur': 'kr', 'Chequia': 'cz',
+  'Canada': 'ca', 'Bosnia': 'ba', 'Catar': 'qa', 'Suiza': 'ch',
+  'Brasil': 'br', 'Marruecos': 'ma', 'Haiti': 'ht', 'Escocia': 'gb-sct',
+  'Estados Unidos': 'us', 'Paraguay': 'py', 'Australia': 'au', 'Turquia': 'tr',
+  'Alemania': 'de', 'Curazao': 'cw', 'Costa de Marfil': 'ci', 'Ecuador': 'ec',
+  'Paises Bajos': 'nl', 'Japon': 'jp', 'Suecia': 'se', 'Tunez': 'tn',
+  'Belgica': 'be', 'Iran': 'ir', 'Egipto': 'eg', 'Nueva Zelanda': 'nz',
+  'Espana': 'es', 'Uruguay': 'uy', 'Arabia Saudita': 'sa', 'Cabo Verde': 'cv',
+  'Francia': 'fr', 'Senegal': 'sn', 'Noruega': 'no', 'Iraq': 'iq',
+  'Argentina': 'ar', 'Austria': 'at', 'Argelia': 'dz', 'Jordania': 'jo',
+  'Portugal': 'pt', 'Colombia': 'co', 'Uzbekistan': 'uz', 'RD Congo': 'cd',
+  'Inglaterra': 'gb-eng', 'Croacia': 'hr', 'Ghana': 'gh', 'Panama': 'pa'
+};
+
+export default function PronosticosQuiniela() {
+  const router = useRouter();
+  const { id } = router.query;
+
+  const [data, setData] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [diaActivo, setDiaActivo] = useState(null);
+  const [guardando, setGuardando] = useState({});
+  const [pronosticos, setPronosticos] = useState({});
+  const [logueado, setLogueado] = useState(null);
+
+  useEffect(() => {
+    const sesion = sessionStorage.getItem('quiniela_sesion');
+    if (!sesion) {
+      router.push('/jugar');
+      return;
+    }
+    setLogueado(JSON.parse(sesion));
+  }, []);
+
+  useEffect(() => {
+    if (!id || !logueado) return;
+    cargarDatos();
+  }, [id, logueado]);
+
+  async function cargarDatos() {
+    try {
+      const r = await fetch(`/api/partidos?quinielaId=${id}`);
+      const d = await r.json();
+      if (d.exito) {
+        // Verificar que esta quiniela sea del usuario logueado
+        if (d.quiniela && d.quiniela.usuario_id !== logueado.id) {
+          alert('Esta quiniela no es tuya');
+          router.push('/jugar');
+          return;
+        }
+        setData(d);
+        setPronosticos(d.pronosticos);
+
+        // Set primer dia con partidos como activo
+        const dias = agruparPorDia(d.partidos);
+        const primerDia = Object.keys(dias)[0];
+        if (primerDia) setDiaActivo(primerDia);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    setCargando(false);
+  }
+
+  function agruparPorDia(partidos) {
+    const grupos = {};
+    partidos.forEach(p => {
+      let claveDia;
+      if (!p.fecha_hora) {
+        claveDia = 'Por definir';
+      } else {
+        const fecha = new Date(p.fecha_hora);
+        claveDia = fecha.toISOString().split('T')[0]; // YYYY-MM-DD
+      }
+      if (!grupos[claveDia]) grupos[claveDia] = [];
+      grupos[claveDia].push(p);
+    });
+    return grupos;
+  }
+
+  function formatearDia(claveDia) {
+    if (claveDia === 'Por definir') return 'Por definir';
+    const fecha = new Date(claveDia + 'T12:00:00');
+    const dias = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
+    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    return `${dias[fecha.getDay()]} ${fecha.getDate()} ${meses[fecha.getMonth()]}`;
+  }
+
+  function formatearHora(fechaHora) {
+    if (!fechaHora) return '';
+    const f = new Date(fechaHora);
+    return f.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+  }
+
+  function partidoEmpezado(fechaHora) {
+    if (!fechaHora) return false;
+    return new Date() >= new Date(fechaHora);
+  }
+
+  async function guardarPronostico(partidoId, golesLocal, golesVisitante) {
+    const key = `${partidoId}`;
+    setGuardando({ ...guardando, [key]: 'guardando' });
+
+    try {
+      const r = await fetch('/api/pronosticar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quinielaId: parseInt(id),
+          partidoId,
+          golesLocal,
+          golesVisitante
+        })
+      });
+      const d = await r.json();
+
+      if (d.exito) {
+        setGuardando({ ...guardando, [key]: 'guardado' });
+        setTimeout(() => {
+          setGuardando(prev => {
+            const nuevo = { ...prev };
+            delete nuevo[key];
+            return nuevo;
+          });
+        }, 1500);
+      } else {
+        setGuardando({ ...guardando, [key]: 'error' });
+        alert('Error: ' + d.error);
+      }
+    } catch (e) {
+      setGuardando({ ...guardando, [key]: 'error' });
+    }
+  }
+
+  function cambiarPronostico(partidoId, lado, valor) {
+    const actual = pronosticos[partidoId] || {};
+    const nuevo = { ...actual };
+    if (lado === 'local') nuevo.goles_local = valor;
+    else nuevo.goles_visitante = valor;
+
+    setPronosticos({ ...pronosticos, [partidoId]: nuevo });
+
+    // Solo guardar si ambos campos tienen valor
+    if (nuevo.goles_local !== undefined && nuevo.goles_local !== '' && nuevo.goles_visitante !== undefined && nuevo.goles_visitante !== '') {
+      // Debounce: esperar 800ms despues del ultimo cambio
+      clearTimeout(window[`debounce_${partidoId}`]);
+      window[`debounce_${partidoId}`] = setTimeout(() => {
+        guardarPronostico(partidoId, nuevo.goles_local, nuevo.goles_visitante);
+      }, 800);
+    }
+  }
+
+  function logout() {
+    sessionStorage.removeItem('quiniela_sesion');
+    router.push('/jugar');
+  }
+
+  if (cargando || !data) {
+    return (
+      <div style={{ fontFamily: 'Inter, system-ui, sans-serif', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        Cargando...
+      </div>
+    );
+  }
+
+  const dias = agruparPorDia(data.partidos);
+  const clavesDias = Object.keys(dias);
+  const partidosDelDia = diaActivo ? dias[diaActivo] || [] : [];
+  const totalPronosticados = Object.keys(pronosticos).filter(k => pronosticos[k] && pronosticos[k].goles_local !== undefined).length;
+
+  return (
+    <div style={{ fontFamily: 'Inter, system-ui, sans-serif', background: '#F8F9FB', minHeight: '100vh' }}>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+      <header style={{ background: 'linear-gradient(135deg, #042C53, #0C447C)', color: 'white', padding: '20px 30px', position: 'sticky', top: 0, zIndex: 100 }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <a href="/jugar" style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, textDecoration: 'none' }}>← Mis quinielas</a>
+            <h1 style={{ fontSize: 22, fontWeight: 800, marginTop: 4 }}>{data.quiniela?.nombre || 'Quiniela'}</h1>
+            <div style={{ fontSize: 13, opacity: 0.8, marginTop: 2 }}>
+              {totalPronosticados} de {data.partidos.length} partidos pronosticados
+            </div>
+          </div>
+          <button onClick={logout} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Salir</button>
+        </div>
+      </header>
+
+      {/* Tabs de dias */}
+      <div style={{ background: 'white', borderBottom: '1px solid #E0E0E0', overflowX: 'auto', position: 'sticky', top: 90, zIndex: 50 }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', gap: 4, padding: '12px 16px' }}>
+          {clavesDias.map(clave => {
+            const partidosDia = dias[clave];
+            const pronosticadosDia = partidosDia.filter(p => pronosticos[p.id] && pronosticos[p.id].goles_local !== undefined).length;
+            const completo = pronosticadosDia === partidosDia.length;
+            return (
+              <button
+                key={clave}
+                onClick={() => setDiaActivo(clave)}
+                style={{
+                  padding: '10px 16px',
+                  background: diaActivo === clave ? '#042C53' : '#F0F2F5',
+                  color: diaActivo === clave ? 'white' : '#666',
+                  border: 'none',
+                  borderRadius: 10,
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: 13,
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                {formatearDia(clave)}
+                <span style={{
+                  fontSize: 11,
+                  padding: '2px 6px',
+                  background: completo ? '#1D9E75' : (diaActivo === clave ? 'rgba(255,255,255,0.2)' : '#E0E0E0'),
+                  color: completo ? 'white' : (diaActivo === clave ? 'white' : '#888'),
+                  borderRadius: 6
+                }}>
+                  {pronosticadosDia}/{partidosDia.length}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 800, margin: '0 auto', padding: '30px 20px' }}>
+        {partidosDelDia.length === 0 ? (
+          <div style={{ textAlign: 'center', color: '#888', padding: 40 }}>No hay partidos en este dia</div>
+        ) : (
+          partidosDelDia.map(p => {
+            const empezado = partidoEmpezado(p.fecha_hora);
+            const pron = pronosticos[p.id] || {};
+            const estadoGuardado = guardando[p.id];
+
+            return (
+              <div key={p.id} style={{
+                background: 'white',
+                borderRadius: 14,
+                padding: 20,
+                marginBottom: 12,
+                border: '1px solid #E0E0E0',
+                opacity: empezado ? 0.6 : 1
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14, fontSize: 12, color: '#888' }}>
+                  <span>{p.fase}{p.grupo ? ` · Grupo ${p.grupo}` : ''}</span>
+                  <span>{formatearHora(p.fecha_hora)}{empezado ? ' · 🔒 Bloqueado' : ''}</span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, alignItems: 'center' }}>
+                  {/* Local */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-end' }}>
+                    <span style={{ fontWeight: 600, textAlign: 'right', fontSize: 14 }}>{p.local}</span>
+                    {BANDERAS[p.local] && <img src={`https://flagcdn.com/w80/${BANDERAS[p.local]}.png`} style={{ width: 32, height: 22, borderRadius: 3, flexShrink: 0 }} />}
+                  </div>
+
+                  {/* Inputs */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input
+                      type="number"
+                      min="0"
+                      max="20"
+                      disabled={empezado}
+                      value={pron.goles_local !== undefined ? pron.goles_local : ''}
+                      onChange={e => cambiarPronostico(p.id, 'local', e.target.value)}
+                      style={{
+                        width: 50,
+                        height: 50,
+                        textAlign: 'center',
+                        fontSize: 22,
+                        fontWeight: 800,
+                        border: '2px solid ' + (estadoGuardado === 'guardado' ? '#1D9E75' : estadoGuardado === 'error' ? '#E04444' : '#E0E0E0'),
+                        borderRadius: 10,
+                        background: empezado ? '#F0F2F5' : 'white'
+                      }}
+                    />
+                    <span style={{ fontSize: 16, fontWeight: 700, color: '#888' }}>-</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="20"
+                      disabled={empezado}
+                      value={pron.goles_visitante !== undefined ? pron.goles_visitante : ''}
+                      onChange={e => cambiarPronostico(p.id, 'visitante', e.target.value)}
+                      style={{
+                        width: 50,
+                        height: 50,
+                        textAlign: 'center',
+                        fontSize: 22,
+                        fontWeight: 800,
+                        border: '2px solid ' + (estadoGuardado === 'guardado' ? '#1D9E75' : estadoGuardado === 'error' ? '#E04444' : '#E0E0E0'),
+                        borderRadius: 10,
+                        background: empezado ? '#F0F2F5' : 'white'
+                      }}
+                    />
+                  </div>
+
+                  {/* Visitante */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {BANDERAS[p.visitante] && <img src={`https://flagcdn.com/w80/${BANDERAS[p.visitante]}.png`} style={{ width: 32, height: 22, borderRadius: 3, flexShrink: 0 }} />}
+                    <span style={{ fontWeight: 600, fontSize: 14 }}>{p.visitante}</span>
+                  </div>
+                </div>
+
+                {estadoGuardado && (
+                  <div style={{ textAlign: 'center', marginTop: 10, fontSize: 11, fontWeight: 600, color: estadoGuardado === 'guardado' ? '#1D9E75' : estadoGuardado === 'error' ? '#E04444' : '#888' }}>
+                    {estadoGuardado === 'guardando' && '💾 Guardando...'}
+                    {estadoGuardado === 'guardado' && '✓ Guardado'}
+                    {estadoGuardado === 'error' && '✕ Error'}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
