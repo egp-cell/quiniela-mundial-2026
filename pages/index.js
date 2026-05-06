@@ -26,7 +26,7 @@ export default function Home() {
   const [reglamento, setReglamento] = useState(false);
   const [countdown, setCountdown] = useState({ d: 0, h: 0, m: 0, s: 0 });
   const [isMobile, setIsMobile] = useState(false);
-
+  const [grupoAbierto, setGrupoAbierto] = useState(null);
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
@@ -138,21 +138,47 @@ export default function Home() {
         </div>
       </div>
 
-      <section style={{ padding: isMobile ? '60px 16px' : '80px 20px', background: 'linear-gradient(180deg, #F8F9FB, #EBEEF3)' }}>
+     <section style={{ padding: isMobile ? '60px 16px' : '80px 20px', background: 'linear-gradient(180deg, #F8F9FB, #EBEEF3)' }}>
         <h2 style={{ fontSize: isMobile ? 26 : 36, fontWeight: 800, textAlign: 'center', color: '#042C53', marginBottom: isMobile ? 28 : 40 }}>Los 12 grupos del Mundial</h2>
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))', gap: 16 }}>
-          {Object.keys(GRUPOS).map(letra => (
-            <div key={letra} style={{ background: 'white', borderRadius: 14, overflow: 'hidden', border: '1px solid #E0E0E0' }}>
-              <div style={{ background: 'linear-gradient(135deg, #042C53, #0C447C)', color: 'white', padding: '14px 18px', fontWeight: 800 }}>Grupo {letra}</div>
-              {GRUPOS[letra].map((eq, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 18px' }}>
-                  <img src={`https://flagcdn.com/w80/${eq.c}.png`} style={{ width: 32, height: 22, borderRadius: 3 }} />
-                  <span style={{ fontSize: 14 }}>{eq.n}</span>
+        {isMobile ? (
+          <div style={{ maxWidth: 600, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {Object.keys(GRUPOS).map(letra => {
+              const abierto = grupoAbierto === letra;
+              return (
+                <div key={letra} style={{ background: 'white', borderRadius: 14, overflow: 'hidden', border: '1px solid #E0E0E0' }}>
+                  <button onClick={() => setGrupoAbierto(abierto ? null : letra)} style={{ width: '100%', background: 'linear-gradient(135deg, #042C53, #0C447C)', color: 'white', padding: '16px 18px', fontWeight: 800, border: 'none', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 15, fontFamily: 'inherit' }}>
+                    <span>Grupo {letra}</span>
+                    <span style={{ fontSize: 18, transform: abierto ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▼</span>
+                  </button>
+                  {abierto && (
+                    <div>
+                      {GRUPOS[letra].map((eq, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 18px', borderTop: i === 0 ? 'none' : '1px solid #F0F2F5' }}>
+                          <img src={`https://flagcdn.com/w80/${eq.c}.png`} style={{ width: 32, height: 22, borderRadius: 3 }} />
+                          <span style={{ fontSize: 14 }}>{eq.n}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 16 }}>
+            {Object.keys(GRUPOS).map(letra => (
+              <div key={letra} style={{ background: 'white', borderRadius: 14, overflow: 'hidden', border: '1px solid #E0E0E0' }}>
+                <div style={{ background: 'linear-gradient(135deg, #042C53, #0C447C)', color: 'white', padding: '14px 18px', fontWeight: 800 }}>Grupo {letra}</div>
+                {GRUPOS[letra].map((eq, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 18px' }}>
+                    <img src={`https://flagcdn.com/w80/${eq.c}.png`} style={{ width: 32, height: 22, borderRadius: 3 }} />
+                    <span style={{ fontSize: 14 }}>{eq.n}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <section style={{ background: 'linear-gradient(180deg, #042C53, #0C447C)', color: 'white', padding: isMobile ? '50px 16px' : '60px 20px' }}>
