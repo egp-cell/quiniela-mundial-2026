@@ -19,6 +19,7 @@ const GRUPOS = {
 export default function Home() {
   const [cantidad, setCantidad] = useState(1);
   const [stats, setStats] = useState({ totalQuinielas: 0, bolsa: 0 });
+  const [topRanking, setTopRanking] = useState([]);
   const [form, setForm] = useState({ nombre: '', email: '', telefono: '' });
   const [enviando, setEnviando] = useState(false);
   const [exito, setExito] = useState(null);
@@ -27,6 +28,9 @@ export default function Home() {
 
   useEffect(() => {
     fetch('/api/stats').then(r => r.json()).then(setStats).catch(() => {});
+    fetch('/api/tabla').then(r => r.json()).then(d => {
+      if (d.exito) setTopRanking((d.ranking || []).slice(0, 5));
+    });
     const t = setInterval(() => {
       const inicio = new Date('2026-06-11T13:00:00-06:00').getTime();
       const ahora = new Date().getTime();
@@ -79,10 +83,12 @@ export default function Home() {
     <div style={{ fontFamily: 'Inter, system-ui, sans-serif', background: '#F8F9FB', minHeight: '100vh' }}>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-      <div style={{ background: '#021A33', color: 'white', padding: '12px', display: 'flex', justifyContent: 'center', gap: 10, position: 'sticky', top: 0, zIndex: 50 }}>
-        <button onClick={() => setReglamento(true)} style={{ padding: '8px 18px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>📖 Reglamento</button>
-        <a href="/jugar" style={{ padding: '8px 18px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: 8, textDecoration: 'none', fontWeight: 600, fontSize: 13 }}>🔐 Entrar</a>
-        <a href="#registro" style={{ padding: '8px 18px', background: '#FAC775', color: '#412402', borderRadius: 8, textDecoration: 'none', fontWeight: 700, fontSize: 13 }}>Inscribirme ahora</a>
+      <div style={{ background: '#021A33', color: 'white', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, position: 'sticky', top: 0, zIndex: 50 }}>
+        <div style={{ display: 'flex', gap: 10, flex: 1, justifyContent: 'center' }}>
+          <button onClick={() => setReglamento(true)} style={{ padding: '8px 18px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>📖 Reglamento</button>
+          <a href="#registro" style={{ padding: '8px 18px', background: '#FAC775', color: '#412402', borderRadius: 8, textDecoration: 'none', fontWeight: 700, fontSize: 13 }}>Inscribirme ahora</a>
+        </div>
+        <a href="/jugar" style={{ padding: '12px 28px', background: '#1D9E75', color: 'white', borderRadius: 10, textDecoration: 'none', fontWeight: 800, fontSize: 15, boxShadow: '0 4px 12px rgba(29,158,117,0.4)' }}>🔐 Log In</a>
       </div>
 
       <section style={{ background: 'linear-gradient(135deg, #042C53, #0C447C)', color: 'white', padding: '60px 20px 100px' }}>
@@ -161,7 +167,44 @@ export default function Home() {
           Comision del organizador: 7% de la bolsa
         </div>
       </section>
-
+{topRanking.length > 0 && (
+        <section style={{ background: '#F8F9FB', padding: '60px 20px' }}>
+          <div style={{ maxWidth: 700, margin: '0 auto' }}>
+            <h2 style={{ fontSize: 36, fontWeight: 800, textAlign: 'center', marginBottom: 8, color: '#042C53' }}>🏆 Top 5</h2>
+            <p style={{ textAlign: 'center', color: '#666', fontSize: 14, marginBottom: 32 }}>Los líderes de la quiniela en este momento</p>
+            <div style={{ background: 'white', borderRadius: 20, overflow: 'hidden', border: '1px solid #E0E0E0', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr 80px', padding: '14px 20px', background: '#F8F9FB', fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', borderBottom: '1px solid #E0E0E0' }}>
+                <div style={{ textAlign: 'center' }}>Pos</div>
+                <div>Quiniela</div>
+                <div style={{ textAlign: 'center' }}>Pts</div>
+              </div>
+              {topRanking.map(q => {
+                const colores = q.posicion === 1 ? { bg: 'linear-gradient(135deg, #FFD700, #FFA500)', txt: 'white', emoji: '🥇' }
+                              : q.posicion === 2 ? { bg: 'linear-gradient(135deg, #C0C0C0, #A8A8A8)', txt: 'white', emoji: '🥈' }
+                              : q.posicion === 3 ? { bg: 'linear-gradient(135deg, #CD7F32, #A0522D)', txt: 'white', emoji: '🥉' }
+                              : { bg: '#F0F2F5', txt: '#666', emoji: '' };
+                return (
+                  <div key={q.id} style={{ display: 'grid', gridTemplateColumns: '60px 1fr 80px', padding: '16px 20px', borderBottom: '1px solid #F0F2F5', alignItems: 'center' }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: '50%', background: colores.bg, color: colores.txt, fontWeight: 800, fontSize: 13 }}>
+                        {colores.emoji || `#${q.posicion}`}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, color: '#042C53', fontSize: 15 }}>{q.nombreQuiniela}</div>
+                      <div style={{ fontSize: 12, color: '#888' }}>{q.nombreUsuario}</div>
+                    </div>
+                    <div style={{ textAlign: 'center', fontSize: 22, fontWeight: 900, color: '#042C53' }}>{q.puntos}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ textAlign: 'center', marginTop: 24 }}>
+              <a href="/tabla" style={{ display: 'inline-block', padding: '12px 24px', background: '#042C53', color: 'white', borderRadius: 10, textDecoration: 'none', fontWeight: 700, fontSize: 14 }}>Ver tabla completa →</a>
+            </div>
+          </div>
+        </section>
+      )}
       <section id="registro" style={{ padding: '80px 20px', background: 'white' }}>
         <h2 style={{ fontSize: 36, fontWeight: 800, textAlign: 'center', color: '#042C53', marginBottom: 40 }}>Inscribete</h2>
         <form onSubmit={enviarForm} style={{ maxWidth: 600, margin: '0 auto', background: 'white', padding: 40, borderRadius: 24, border: '1px solid #E0E0E0' }}>
