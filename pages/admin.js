@@ -73,7 +73,10 @@ export default function Admin() {
       <header style={{ background: 'linear-gradient(135deg, #042C53, #0C447C)', color: 'white', padding: '20px 30px' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1 style={{ fontSize: 22, fontWeight: 800 }}>⚙️ Panel Admin · Quiniela Mundial 2026</h1>
-          <button onClick={cargar} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>🔄 Refrescar</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <a href="/admin/resultados" style={{ padding: '8px 16px', background: '#FAC775', color: '#412402', borderRadius: 8, textDecoration: 'none', fontWeight: 700, fontSize: 13 }}>⚽ Capturar resultados</a>
+            <button onClick={cargar} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>🔄 Refrescar</button>
+          </div>
         </div>
       </header>
 
