@@ -2,20 +2,19 @@ import { useState, useEffect } from 'react';
 
 const COSTO = 3000;
 const GRUPOS = {
-  'A':[{n:'Mexico',c:'mx'},{n:'Sudafrica',c:'za'},{n:'Corea del Sur',c:'kr'},{n:'Chequia',c:'cz'}],
+  'A':[{n:'México',c:'mx'},{n:'Sudáfrica',c:'za'},{n:'Corea del Sur',c:'kr'},{n:'Chequia',c:'cz'}],
   'B':[{n:'Canada',c:'ca'},{n:'Bosnia',c:'ba'},{n:'Catar',c:'qa'},{n:'Suiza',c:'ch'}],
-  'C':[{n:'Brasil',c:'br'},{n:'Marruecos',c:'ma'},{n:'Haiti',c:'ht'},{n:'Escocia',c:'gb-sct'}],
-  'D':[{n:'Estados Unidos',c:'us'},{n:'Paraguay',c:'py'},{n:'Australia',c:'au'},{n:'Turquia',c:'tr'}],
+  'C':[{n:'Brasil',c:'br'},{n:'Marruecos',c:'ma'},{n:'Haití',c:'ht'},{n:'Escocia',c:'gb-sct'}],
+  'D':[{n:'Estados Unidos',c:'us'},{n:'Paraguay',c:'py'},{n:'Australia',c:'au'},{n:'Turquía',c:'tr'}],
   'E':[{n:'Alemania',c:'de'},{n:'Curazao',c:'cw'},{n:'Costa de Marfil',c:'ci'},{n:'Ecuador',c:'ec'}],
-  'F':[{n:'Paises Bajos',c:'nl'},{n:'Japon',c:'jp'},{n:'Suecia',c:'se'},{n:'Tunez',c:'tn'}],
-  'G':[{n:'Belgica',c:'be'},{n:'Iran',c:'ir'},{n:'Egipto',c:'eg'},{n:'Nueva Zelanda',c:'nz'}],
-  'H':[{n:'Espana',c:'es'},{n:'Uruguay',c:'uy'},{n:'Arabia Saudita',c:'sa'},{n:'Cabo Verde',c:'cv'}],
-  'I':[{n:'Francia',c:'fr'},{n:'Senegal',c:'sn'},{n:'Noruega',c:'no'},{n:'Iraq',c:'iq'}],
+  'F':[{n:'Países Bajos',c:'nl'},{n:'Japón',c:'jp'},{n:'Suecia',c:'se'},{n:'Túnez',c:'tn'}],
+  'G':[{n:'Bélgica',c:'be'},{n:'Irán',c:'ir'},{n:'Egipto',c:'eg'},{n:'Nueva Zelanda',c:'nz'}],
+  'H':[{n:'España',c:'es'},{n:'Uruguay',c:'uy'},{n:'Arabia Saudita',c:'sa'},{n:'Cabo Verde',c:'cv'}],
+  'I':[{n:'Francia',c:'fr'},{n:'Senegal',c:'sn'},{n:'Noruega',c:'no'},{n:'Irak',c:'iq'}],
   'J':[{n:'Argentina',c:'ar'},{n:'Austria',c:'at'},{n:'Argelia',c:'dz'},{n:'Jordania',c:'jo'}],
-  'K':[{n:'Portugal',c:'pt'},{n:'Colombia',c:'co'},{n:'Uzbekistan',c:'uz'},{n:'RD Congo',c:'cd'}],
-  'L':[{n:'Inglaterra',c:'gb-eng'},{n:'Croacia',c:'hr'},{n:'Ghana',c:'gh'},{n:'Panama',c:'pa'}]
+  'K':[{n:'Portugal',c:'pt'},{n:'Colombia',c:'co'},{n:'Uzbekistán',c:'uz'},{n:'RD Congo',c:'cd'}],
+  'L':[{n:'Inglaterra',c:'gb-eng'},{n:'Croacia',c:'hr'},{n:'Ghana',c:'gh'},{n:'Panamá',c:'pa'}]
 };
-
 export default function Home() {
   const [cantidad, setCantidad] = useState(1);
   const [stats, setStats] = useState({ totalQuinielas: 0, bolsa: 0 });
