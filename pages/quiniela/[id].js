@@ -200,7 +200,10 @@ export default function PronosticosQuiniela() {
       <header style={{ background: 'linear-gradient(135deg, #042C53, #0C447C)', color: 'white', padding: '20px 30px', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <a href="/jugar" style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, textDecoration: 'none' }}>← Mis quinielas</a>
+           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <a href="/jugar" style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, textDecoration: 'none' }}>← Mis quinielas</a>
+              <a href="/tabla" style={{ padding: '6px 12px', background: '#FAC775', color: '#412402', borderRadius: 8, textDecoration: 'none', fontWeight: 700, fontSize: 12 }}>🏆 Tabla</a>
+            </div>
             <h1 style={{ fontSize: 22, fontWeight: 800, marginTop: 4 }}>{data.quiniela?.nombre || 'Quiniela'}</h1>
             <div style={{ fontSize: 13, opacity: 0.8, marginTop: 2 }}>
               {totalPronosticados} de {data.partidos.length} partidos pronosticados
